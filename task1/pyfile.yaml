@@ -1,0 +1,39 @@
+apiVersion: v1
+data:
+  pyfile: "from queue import Queue # Needed for moving average buffer\n\nimport multiprocessing\nimport
+    datetime as dt\nimport time\n\ndef handler(input: dict, context: object) -> dict:\n
+    \   # Results dict\n    metrics = dict()\n\n    # Save initialization time\n    initial_time
+    = dt.datetime.fromisoformat(input['timestamp'])\n    \n    if 'initial_timestamp'
+    not in context.env:\n        context.env['initial_timestamp'] = initial_time.timestamp()\n\n
+    \   # Moving average of cpu utilization for the last minute\n    # For every cpu\n
+    \   cpus = multiprocessing.cpu_count()\n\n    for idx in range(0, cpus):\n        #
+    Get common keys\n        mov_avg = f\"mov_avg-{idx}\"\n        buffer  = f\"circular_buffer-{idx}\"\n
+    \       \n        # Add keys to env dict on startup\n        if mov_avg not in
+    context.env:\n            context.env[mov_avg] = 0\n\n        if buffer not in
+    context.env:\n            context.env[buffer] = Queue()\n\n        # Get current
+    value and add to circular buffer\n        new_usage   = input[f\"cpu_percent-{idx}\"]\n
+    \       context.env[buffer].put(new_usage)\n\n        num_entries = context.env[buffer].qsize()\n
+    \       last_avg    = context.env[mov_avg]\n\n        # Less than one minute has
+    passed\n        # So this is the first filling of the circular buffer\n        if
+    time.time() - context.env['initial_timestamp'] < 60:\n            # Update moving
+    average with a new entry (cumulative moving average)\n            context.env[mov_avg]
+    = last_avg + (new_usage - last_avg) / num_entries\n        \n        # One minute
+    has passed, always update average (circular buffer size will remain constant)\n
+    \       else:\n            last_usage = context.env[buffer].get()\n            \n
+    \           # Add average from new value and drop average from last value\n            context.env[mov_avg]
+    = last_avg + (new_usage - last_usage) / num_entries\n\n        # Add this metric
+    to result\n        metrics[f\"avg_util_60sec_cpu-{idx}\"] = context.env[mov_avg]\n\n
+    \   # Calculate other metrics\n    # Percentage of outgoing traffic bytes\n    bytes_sent
+    \    = input['net_io_counters_eth0-bytes_sent']\n    bytes_received = input['net_io_counters_eth0-bytes_recv']\n\n
+    \   # Percentage of memory caching content\n    mem_cache = input['virtual_memory-cached']
+    + input['virtual_memory-buffers']\n    mem_total = input['virtual_memory-total']\n\n
+    \   # Add other metrics\n    metrics['percent_network_outgoing'] = 100 * bytes_sent
+    / (bytes_sent + bytes_received)\n    metrics['percent_memory_caching']   = 100
+    * mem_cache  / mem_total\n\n    return metrics"
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2023-12-12T23:01:09Z"
+  name: pyfile
+  namespace: gabrielcardoso
+  resourceVersion: "4407596"
+  uid: 6869d4aa-b0a5-4e41-a5a2-5e3cf22d58c4

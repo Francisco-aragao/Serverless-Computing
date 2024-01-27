@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  REDIS_OUTPUT_KEY: gabrielcardoso-proj3-output
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2023-12-12T23:01:09Z"
+  name: outputkey
+  namespace: gabrielcardoso
+  resourceVersion: "4407597"
+  uid: 09835d3c-8f92-49ff-93ba-fbc014555620

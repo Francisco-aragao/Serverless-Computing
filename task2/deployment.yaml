@@ -1,0 +1,28 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+      - name: dashboard-main
+        image: docker.io/gabrielpains/dashboard_tp3_franciscogabriel:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 32182
+        env:
+        - name: REDIS_HOST
+          value: "192.168.121.66"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_KEY
+          value: "gabrielcardoso-proj3-output"
